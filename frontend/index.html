@@ -68,14 +68,28 @@
             <div class="flex flex-wrap gap-4">
                 <input type="text" placeholder="Search by Diet Type" class="p-2 border rounded w-full sm:w-auto">
                 <select class="p-2 border rounded w-full sm:w-auto">
-                    <option value="all">All Diet Types</option>
-                    <option value="vegan">Vegan</option>
+                    <option value="">All Diet Types</option>
+                    <option value="vegan">Dash</option>
                     <option value="keto">Keto</option>
-                    <!-- Add more options -->
+                    <option value="keto">Mediterranean</option>
+                    <option value="keto">Paleo</option>
+                    <option value="keto">Vegan</option>
                 </select>
             </div>
+            <table id="insightsTable" class="min-w-full bg-white border border-gray-300 rounded-lg mt-5">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="p-2 text-left">Diet Type</th>
+                        <th class="p-2 text-left">Average Protein (g)</th>
+                        <th class="p-2 text-left">Average Carbs (g)</th>
+                        <th class="p-2 text-left">Average Fat (g)</th>
+                    </tr>
+                </thead>
+                <tbody id="insightsTableBody">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
         </section>
-
         <section class="mb-8">
             <h2 class="text-2xl font-semibold mb-4">API Data Interaction</h2>
             <div class="flex flex-wrap gap-4">
@@ -84,6 +98,39 @@
                 <button id="clustersBtn"class="bg-purple-600 text-white py-2 px-4 rounded">Get Clusters</button>
             </div>
         </section> 
+
+        <!-- Recipes Table Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Top Recipes by Protein Content</h2>
+            <table id="recipesTable" class="min-w-full bg-white border border-gray-300 rounded-lg">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="p-2 text-left">Diet Type</th>
+                        <th class="p-2 text-left">Recipe Name</th>
+                        <th class="p-2 text-left">Protein (g)</th>
+                    </tr>
+                </thead>
+                <tbody id="recipesTableBody">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Clusters Table Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Most Common Cuisine by Diet Type</h2>
+            <table id="clustersTable" class="min-w-full bg-white border border-gray-300 rounded-lg">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="p-2 text-left">Diet Type</th>
+                        <th class="p-2 text-left">Most Common Cuisine</th>
+                    </tr>
+                </thead>
+                <tbody id="clustersTableBody">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </section>
 
         <section>
             <h2 class="text-2xl font-semibold mb-4">Pagination</h2>

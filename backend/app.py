@@ -5,9 +5,11 @@ matplotlib.use('Agg')  # Set the non-GUI Agg backend for matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from flask import Flask, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__, static_folder="storage/charts", static_url_path="/charts")
 
+CORS(app)
 # ======================
 # Local storage paths
 # ======================
