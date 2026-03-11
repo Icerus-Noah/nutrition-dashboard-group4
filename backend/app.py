@@ -7,8 +7,8 @@ import seaborn as sns
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-DATASET_PATH = os.getenv("DATASET_PATH", "storage/datasets/All_Diets.csv")
-CHART_FOLDER = os.getenv("CHART_FOLDER", "storage/charts")
+DATASET_PATH = os.getenv("DATASET_PATH", "/app/storage/datasets/All_Diets.csv")
+CHART_FOLDER = os.getenv("CHART_FOLDER", "/app/storage/charts")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
 
 os.makedirs(CHART_FOLDER, exist_ok=True)
