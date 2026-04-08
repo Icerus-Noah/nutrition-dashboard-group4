@@ -7,11 +7,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
+import requests
+from azure.identity import ManagedIdentityCredential
 
 DATASET_PATH = os.getenv("DATASET_PATH", "/app/storage/datasets/All_Diets.csv")
 CHART_FOLDER = os.getenv("CHART_FOLDER", "/app/storage/charts")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "")
 REQUIRE_AUTH = os.getenv("REQUIRE_AUTH", "false").lower() == "true"
+AZURE_SUBSCRIPTION_ID = os.getenv("AZURE_SUBSCRIPTION_ID", "")
+AZURE_RESOURCE_GROUP = os.getenv("AZURE_RESOURCE_GROUP", "")
 
 os.makedirs(CHART_FOLDER, exist_ok=True)
 
@@ -25,6 +29,88 @@ CORS(
 )
 
 _request_counts = {}
+
+def get_policy_compliance_summary():
+    if not AZURE_SUBSCRIPTION_ID or not AZURE_RESOURCE_GROUP:
+        return {
+            "label": "Not Configured",
+            "verified": False,
+            "details": "Azure subscription/resource group environment variables are missing"
+        }
+
+    try:
+        credential = ManagedIdentityCredential()
+        token = credential.get_token("https://management.azure.com/.default").token
+
+        url = (
+            f"https://management.azure.com/subscriptions/{AZURE_SUBSCRIPTION_ID}"
+            f"/resourceGroups/{AZURE_RESOURCE_GROUP}"
+            f"/providers/Microsoft.PolicyInsights/policyStates/latest/queryResults"
+            f"?api-version=2024-10-01"
+        )
+
+        body = {
+            "queryResultsFilter": {
+                "from": None
+            }
+        }
+
+        response = requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            },
+            json=body,
+            timeout=20
+        )
+        response.raise_for_status()
+
+        data = response.json()
+        rows = data.get("value", [])
+
+        if not rows:
+            return {
+                "label": "No Policy Data",
+                "verified": False,
+                "details": "Azure Policy returned no compliance rows for this resource group"
+            }
+
+        non_compliant = 0
+        compliant = 0
+        unknown = 0
+
+        for row in rows:
+            state = (row.get("complianceState") or "").lower()
+            if state == "noncompliant":
+                non_compliant += 1
+            elif state == "compliant":
+                compliant += 1
+            else:
+                unknown += 1
+
+        if non_compliant == 0 and compliant > 0:
+            label = "Azure Policy Compliant"
+            verified = True
+        elif non_compliant > 0:
+            label = "Azure Policy Issues Found"
+            verified = False
+        else:
+            label = "Compliance Unknown"
+            verified = False
+
+        return {
+            "label": label,
+            "verified": verified,
+            "details": f"Compliant: {compliant}, Noncompliant: {non_compliant}, Unknown: {unknown}"
+        }
+
+    except Exception as ex:
+        return {
+            "label": "Compliance Check Failed",
+            "verified": False,
+            "details": str(ex)
+        }
 
 
 @app.after_request
@@ -161,7 +247,6 @@ def health():
 def security_status():
     forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
     https_enabled = request.is_secure or forwarded_proto == "https"
-
     cors_restricted = bool(FRONTEND_URL and FRONTEND_URL != "*")
     auth_required = REQUIRE_AUTH
 
@@ -176,11 +261,7 @@ def security_status():
             "verified": auth_required,
             "details": "Verified from backend REQUIRE_AUTH setting"
         },
-        "compliance": {
-            "label": "GDPR-aligned demo",
-            "verified": False,
-            "details": "Declared project posture, not automatically audited"
-        },
+        "compliance": get_policy_compliance_summary(),
         "cors_restricted": {
             "label": "Yes" if cors_restricted else "No",
             "verified": cors_restricted,
