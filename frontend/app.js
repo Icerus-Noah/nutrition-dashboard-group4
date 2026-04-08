@@ -117,10 +117,23 @@ async function loadSecurityStatus() {
         if (!res.ok) throw new Error("Failed to fetch security status");
 
         const data = await res.json();
-        document.getElementById("secEncryption").textContent = data.encryption;
-        document.getElementById("secAccess").textContent = data.access_control;
-        document.getElementById("secCompliance").textContent = data.compliance;
-        document.getElementById("secCors").textContent = data.cors_restricted ? "Yes" : "No";
+
+        function setStatus(id, statusObj) {
+            const el = document.getElementById(id);
+            if (!el) return;
+
+            const badgeColor = statusObj.verified ? "text-green-600" : "text-yellow-600";
+            el.innerHTML = `
+                <span class="font-semibold ${badgeColor}">${statusObj.label}</span>
+                <span class="block text-xs text-gray-500">${statusObj.details}</span>
+            `;
+        }
+
+        setStatus("secEncryption", data.encryption);
+        setStatus("secAccess", data.access_control);
+        setStatus("secCompliance", data.compliance);
+        setStatus("secCors", data.cors_restricted);
+
     } catch (err) {
         console.error("Security status error:", err);
     }
