@@ -13,16 +13,14 @@ function getActiveDietFilter() {
     return textFilter || dropdownFilter;
 }
 
-async function getInsights(dietType = '') {
-    console.log("Running getInsights with filter:", dietType);
-
+async function getInsights(dietType = "") {
     let url = `${API_BASE}/api/insights`;
     if (dietType) {
         url += `?diet_type=${encodeURIComponent(dietType)}`;
     }
 
     try {
-        const res = await fetch(url);
+        const res = await fetch(url, { credentials: "include" });
         if (!res.ok) throw new Error("Failed to fetch insights");
         const data = await res.json();
 
@@ -33,9 +31,9 @@ async function getInsights(dietType = '') {
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td class="p-2">${insight.Diet_type}</td>
-                <td class="p-2">${Number(insight['Protein(g)']).toFixed(2)}</td>
-                <td class="p-2">${Number(insight['Carbs(g)']).toFixed(2)}</td>
-                <td class="p-2">${Number(insight['Fat(g)']).toFixed(2)}</td>
+                <td class="p-2">${Number(insight["Protein(g)"]).toFixed(2)}</td>
+                <td class="p-2">${Number(insight["Carbs(g)"]).toFixed(2)}</td>
+                <td class="p-2">${Number(insight["Fat(g)"]).toFixed(2)}</td>
             `;
             tableBody.appendChild(row);
         });
@@ -49,7 +47,7 @@ async function getInsights(dietType = '') {
     }
 }
 
-async function getRecipes(page = 1, dietType = '') {
+async function getRecipes(page = 1, dietType = "") {
     if (page < 1) page = 1;
 
     let url = `${API_BASE}/api/recipes?page=${page}&limit=${recipePageSize}`;
@@ -58,7 +56,7 @@ async function getRecipes(page = 1, dietType = '') {
     }
 
     try {
-        const res = await fetch(url);
+        const res = await fetch(url, { credentials: "include" });
         if (!res.ok) throw new Error("Failed to fetch recipes");
 
         const result = await res.json();
@@ -71,7 +69,7 @@ async function getRecipes(page = 1, dietType = '') {
             row.innerHTML = `
                 <td class="p-2">${recipe.Diet_type}</td>
                 <td class="p-2">${recipe.Recipe_name}</td>
-                <td class="p-2">${recipe['Protein(g)']}</td>
+                <td class="p-2">${recipe["Protein(g)"]}</td>
             `;
             tableBody.appendChild(row);
         });
@@ -85,14 +83,14 @@ async function getRecipes(page = 1, dietType = '') {
     }
 }
 
-async function getClusters(dietType = '') {
+async function getClusters(dietType = "") {
     try {
         let url = `${API_BASE}/api/clusters`;
         if (dietType) {
             url += `?diet_type=${encodeURIComponent(dietType)}`;
         }
 
-        const res = await fetch(url);
+        const res = await fetch(url, { credentials: "include" });
         if (!res.ok) throw new Error("Failed to fetch clusters");
 
         const data = await res.json();
@@ -110,6 +108,40 @@ async function getClusters(dietType = '') {
         });
     } catch (err) {
         console.error("Clusters error:", err);
+    }
+}
+
+async function loadSecurityStatus() {
+    try {
+        const res = await fetch(`${API_BASE}/api/security-status`, { credentials: "include" });
+        if (!res.ok) throw new Error("Failed to fetch security status");
+
+        const data = await res.json();
+        document.getElementById("secEncryption").textContent = data.encryption;
+        document.getElementById("secAccess").textContent = data.access_control;
+        document.getElementById("secCompliance").textContent = data.compliance;
+        document.getElementById("secCors").textContent = data.cors_restricted ? "Yes" : "No";
+    } catch (err) {
+        console.error("Security status error:", err);
+    }
+}
+
+async function loadUserInfo() {
+    try {
+        const res = await fetch("/.auth/me", { credentials: "include" });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const userInfo = document.getElementById("userInfo");
+
+        const principal = data?.clientPrincipal;
+        if (principal) {
+            userInfo.innerHTML = `Signed in as <strong>${principal.userDetails || principal.identityProvider}</strong>`;
+        } else {
+            userInfo.textContent = "Not signed in";
+        }
+    } catch (err) {
+        console.error("Failed to load user info", err);
     }
 }
 
@@ -131,56 +163,52 @@ function updatePaginationUI() {
     }
 }
 
-document.getElementById("insightsBtn").addEventListener("click", () => {
+document.getElementById("insightsBtn")?.addEventListener("click", () => {
     const filter = getActiveDietFilter();
     getInsights(filter);
 });
 
-document.getElementById("recipesBtn").addEventListener("click", () => {
+document.getElementById("recipesBtn")?.addEventListener("click", () => {
     const filter = getActiveDietFilter();
     getRecipes(1, filter);
 });
 
-document.getElementById("clustersBtn").addEventListener("click", () => {
+document.getElementById("clustersBtn")?.addEventListener("click", () => {
     const filter = getActiveDietFilter();
     getClusters(filter);
 });
 
-const prevBtn = document.getElementById("prevPageBtn");
-const nextBtn = document.getElementById("nextPageBtn");
+document.getElementById("prevPageBtn")?.addEventListener("click", () => {
+    const filter = getActiveDietFilter();
+    getRecipes(currentRecipePage - 1, filter);
+});
 
-if (prevBtn) {
-    prevBtn.addEventListener("click", () => {
-        const filter = getActiveDietFilter();
-        getRecipes(currentRecipePage - 1, filter);
-    });
-}
+document.getElementById("nextPageBtn")?.addEventListener("click", () => {
+    const filter = getActiveDietFilter();
+    getRecipes(currentRecipePage + 1, filter);
+});
 
-if (nextBtn) {
-    nextBtn.addEventListener("click", () => {
-        const filter = getActiveDietFilter();
-        getRecipes(currentRecipePage + 1, filter);
-    });
-}
+dietInput?.addEventListener("input", () => {
+    const filter = dietInput.value.trim();
+    if (dietSelect) dietSelect.value = "";
 
-if (dietInput) {
-    dietInput.addEventListener("input", () => {
-        const filter = dietInput.value.trim();
-        if (dietSelect) dietSelect.value = "";
+    getInsights(filter);
+    getRecipes(1, filter);
+    getClusters(filter);
+});
 
-        getInsights(filter);
-        getRecipes(1, filter);
-        getClusters(filter);
-    });
-}
+dietSelect?.addEventListener("change", () => {
+    const filter = dietSelect.value;
+    if (dietInput) dietInput.value = "";
 
-if (dietSelect) {
-    dietSelect.addEventListener("change", () => {
-        const filter = dietSelect.value;
-        if (dietInput) dietInput.value = "";
+    getInsights(filter);
+    getRecipes(1, filter);
+    getClusters(filter);
+});
 
-        getInsights(filter);
-        getRecipes(1, filter);
-        getClusters(filter);
-    });
-}
+document.getElementById("cleanupBtn")?.addEventListener("click", () => {
+    document.getElementById("cleanupInfo")?.classList.toggle("hidden");
+});
+
+loadSecurityStatus();
+loadUserInfo();
